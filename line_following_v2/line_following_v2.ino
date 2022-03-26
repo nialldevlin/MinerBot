@@ -46,13 +46,16 @@ uint16_t sensorMinVal[LS_NUM_SENSORS];
 uint16_t normalSpeed = 20;
 
 //TUNING VALS
-float ps = 0.01;
+float ps = 0.003;
 float is = 0.0;
-float ds = 0.005;
+float ds = 0.001;
 
-float pl = 0.1;
+float pl = 0.01;
 float il = 0.0;
-float dl = 0.05;
+float dl = 0.005;
+
+int baseline;
+int turn_or_jump = 0;
 
 double Setpoint, Input, Output;
 
@@ -74,7 +77,7 @@ void setup()
   //turn the PID on
   myPID.SetOutputLimits(-1*normalSpeed/2, normalSpeed/2);
   myPID.SetMode(AUTOMATIC);
-  myPID.SetControllerDirection(DIRECT);
+  myPID.SetControllerDirection(REVERSE);
 }
 
 void floorCalibration() {
@@ -108,10 +111,19 @@ void simpleCalibrate() {
 	/* Set both motors speed 20 */
 	setMotorSpeed(BOTH_MOTORS,20);
 
+  int sensorValAvgSum = 0;
+
 	for(int x = 0;x<100;x++){
 		readLineSensor(sensorVal);
 		setSensorMinMax(sensorVal,sensorMinVal,sensorMaxVal);
+    int sum = 0;
+    for (int i = 0; i < LS_NUM_SENSORS; i++) {
+      sum += sensorVal[i];
+    }
+    sensorValAvgSum += sum / LS_NUM_SENSORS;
 	}
+  baseline = sensorValAvgSum / 100 + 400;
+  Serial.println(baseline);
 
 	/* Disable both motors */
 	disableMotor(BOTH_MOTORS);
@@ -120,17 +132,25 @@ void simpleCalibrate() {
 void turnAround() {
   setMotorDirection(LEFT_MOTOR,MOTOR_DIR_BACKWARD);
   setMotorSpeed(BOTH_MOTORS,normalSpeed/2);
-  delay(800);
+  delay(900);
   setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
 }
 
+void hop() {
+  setMotorDirection(LEFT_MOTOR,MOTOR_DIR_BACKWARD);
+  setMotorSpeed(BOTH_MOTORS,normalSpeed/2);
+  delay(450);
+  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
+  delay(100);
+}
+
 bool lostLine() {
-  Serial.println("lost line");
-  for ( int i = 0; i < LS_NUM_SENSORS; i++ ) {
-     if ( sensorVal[i] > 1000 ) {
+  for (int i = 0; i < LS_NUM_SENSORS; i++) {
+    if (sensorVal[i] > baseline) {
       return false;
-     }
+    }
   }
+  Serial.println("Lost");
   return true;
 }
 
@@ -164,7 +184,7 @@ void loop()
   }
   Serial.println();
   Serial.println();
-  /*if (error < 200)
+  if ((3500 - linePos) < 500)
   {  //we're close to setpoint, use conservative tuning parameters
     myPID.SetTunings(ps, is, ds);
   }
@@ -172,7 +192,7 @@ void loop()
   {
      //we're far from setpoint, use aggressive tuning parameters
      myPID.SetTunings(pl, il, dl);
-  }*/
+  }
   Input = linePos;
   myPID.Compute();
   Serial.print("Position: ");
@@ -183,6 +203,11 @@ void loop()
   setMotorSpeed(LEFT_MOTOR,normalSpeed + Output);
   setMotorSpeed(RIGHT_MOTOR,normalSpeed - Output);
   if (lostLine()) {
-    turnAround();
+    if (turn_or_jump % 2 == 0) {
+      hop();
+    } else {
+      turnAround();
+    }
+    turn_or_jump++;
   }
 }

@@ -208,6 +208,5 @@ void loop()
     } else {
       turnAround();
     }
-    turn_or_jump++;
   }
 }

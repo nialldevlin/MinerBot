@@ -172,6 +172,7 @@ bool lostLine() {
   return true;
 }
 
+//--------------------------------------------------------------------------------------
 bool isCalibrationComplete = false;
 void loop()
 {
@@ -228,6 +229,7 @@ void loop()
     }
   }
 }
+//---------------------------------------------------------------------------------------
 
 void turnByDegrees(float deg, int speed){
   float degTotal = 0;

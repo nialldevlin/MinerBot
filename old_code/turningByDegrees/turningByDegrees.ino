@@ -56,7 +56,8 @@ void loop() {
     gyroY = Wire.read()<<8 | Wire.read(); // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
 
     gyroZ = Wire.read()<<8 | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
-    gyroZ = (abs(gyroZ) < 1)? 0: gyroZ; 
+    gyroZ = (abs(gyroZ) < 1)? 0: gyroZ;
+     
     // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
     Serial.println("Gyz=" + (String)gyroZ + "\tDeg/s: " + (String)(gyroZ/131.0) +"\t"+ (String)(gyroZ/65.5)); 
     degTotal += ((gyroZ / 131.0) / 1000.0) * (millis() - previousMil);

@@ -53,9 +53,9 @@ float ps = 0.003;
 float is = 0.0;
 float ds = 0.001;
 
-float pl = 0.01;
+float pl = 0.03;
 float il = 0.0;
-float dl = 0.005;
+float dl = 0.01;
 
 int baseline;
 int turn_or_jump = 0;
@@ -140,7 +140,7 @@ void loop()
   }
   Serial.println();
   Serial.println();
-  if ((3500 - linePos) < 500)
+  if ((3500 - linePos) < 300)
   {  //we're close to setpoint, use conservative tuning parameters
     myPID.SetTunings(ps, is, ds);
   }
@@ -159,11 +159,15 @@ void loop()
   setMotorSpeed(LEFT_MOTOR,normalSpeed + Output);
   setMotorSpeed(RIGHT_MOTOR,normalSpeed - Output);
   if (lostLine()) {
+    setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
+    setMotorSpeed(BOTH_MOTORS,normalSpeed);
+    delay(300);
     if (turn_or_jump % 2 == 0) {
       hop();
     } else {
       turnAround();
     }
+    turn_or_jump++;
   }
 }
 //---------------------------------------------------------------------------------------
@@ -219,17 +223,14 @@ void simpleCalibrate() {
 }
 
 void turnAround() {
-  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
-  setMotorSpeed(BOTH_MOTORS,normalSpeed);
-  delay(100);
   turnByDegrees(180, normalSpeed/2);
 }
 
 void hop() {
-  turnByDegrees(90, normalSpeed/2);
+  turnByDegrees(-110, normalSpeed/2);
   setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
   setMotorSpeed(BOTH_MOTORS,normalSpeed);
-  delay(200);
+  delay(300);
 }
 
 int dist() {
@@ -251,15 +252,22 @@ int dist() {
 
 bool lostLine() {
   if (dist() < 9) {
+    return true;
+  }
+  int numBelow = 0;
+  for (int i = 0; i < LS_NUM_SENSORS; i++) {
+    if (sensorVal[i] < baseline) {
+      numBelow++;
+    }
+  }
+  if (numBelow > 0 && numBelow < 5) {
+    return false;
+  } else if(numBelow >= 5) {
+    turnByDegrees(-45, normalSpeed/2);
+    return false;
     digitalWrite(debugpin, HIGH);
     delay(500);
     digitalWrite(debugpin, LOW);
-    return true;
-  }
-  for (int i = 0; i < LS_NUM_SENSORS; i++) {
-    if (sensorVal[i] < baseline) {
-      return false;
-    }
   }
   Serial.println("Lost");
   return true;
@@ -275,9 +283,11 @@ void turnByDegrees(float deg, int speed){
     setMotorSpeed(LEFT_MOTOR, speed);
     if(turnRight){
       setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
+      setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
     }
     else{
       setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
+      setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
     }
     
     Wire.beginTransmission(MPU6050_ADDR);

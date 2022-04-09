@@ -150,7 +150,7 @@ void simpleCalibrate() {
     }
     sensorValAvgSum += sum / LS_NUM_SENSORS;
 	}
-  baseline = sensorValAvgSum / 100 + 400;
+  baseline = sensorValAvgSum / 100 - 400;
   Serial.println(baseline);
 
 	/* Disable both motors */
@@ -199,7 +199,7 @@ bool lostLine() {
     return true;
   }
   for (int i = 0; i < LS_NUM_SENSORS; i++) {
-    if (sensorVal[i] > baseline) {
+    if (sensorVal[i] < baseline) {
       return false;
     }
   }

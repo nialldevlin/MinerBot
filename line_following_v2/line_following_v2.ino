@@ -103,9 +103,7 @@ void setup()
   Wire.write(0); // wake up!
   Wire.endTransmission(true);
 
-  digitalWrite(debugpin, HIGH);
-  delay(500);
-  digitalWrite(debugpin, LOW);
+  beep();
 }
 
 //--------------------------------------------------------------------------------------
@@ -162,12 +160,14 @@ void loop()
     setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
     setMotorSpeed(BOTH_MOTORS,normalSpeed);
     delay(300);
-    if (turn_or_jump % 2 == 0) {
+    if (dist() > 13) {
       hop();
+      beep();
     } else {
       turnAround();
+      beep();
+      beep();
     }
-    turn_or_jump++;
   }
 }
 //---------------------------------------------------------------------------------------
@@ -265,9 +265,7 @@ bool lostLine() {
   } else if(numBelow >= 5) {
     turnByDegrees(-45, normalSpeed/2);
     return false;
-    digitalWrite(debugpin, HIGH);
-    delay(500);
-    digitalWrite(debugpin, LOW);
+    beep();
   }
   Serial.println("Lost");
   return true;
@@ -315,4 +313,10 @@ void turnByDegrees(float deg, int speed){
     delay(10);
     
   }
+}
+
+void beep() {
+  digitalWrite(debugpin, HIGH);
+  delay(500);
+  digitalWrite(debugpin, LOW);
 }

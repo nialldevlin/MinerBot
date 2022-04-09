@@ -108,105 +108,6 @@ void setup()
   digitalWrite(debugpin, LOW);
 }
 
-void floorCalibration() {
-	/* Place Robot On Floor (no line) */
-	delay(2000);
-	String btnMsg = "Push left button on Launchpad to begin calibration.\n";
-	btnMsg += "Make sure the robot is on the floor away from the line.\n";
-	/* Wait until button is pressed to start robot */
-	waitBtnPressed(LP_LEFT_BTN,btnMsg,RED_LED);
-  	
-	delay(1000);
-
-	Serial.println("Running calibration on floor");
-	simpleCalibrate();
-	Serial.println("Reading floor values complete");
-
-	btnMsg = "Push left button on Launchpad to begin line following.\n";
-	btnMsg += "Make sure the robot is on the line.\n";
-	/* Wait until button is pressed to start robot */
-	waitBtnPressed(LP_LEFT_BTN,btnMsg,RED_LED);
-	delay(1000);
-
-	enableMotor(BOTH_MOTORS);
-}
-
-void simpleCalibrate() {
-	/* Set both motors direction forward */
-	setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
-	/* Enable both motors */
-	enableMotor(BOTH_MOTORS);
-	/* Set both motors speed 20 */
-	setMotorSpeed(BOTH_MOTORS,20);
-
-  int sensorValAvgSum = 0;
-
-	for(int x = 0;x<100;x++){
-		readLineSensor(sensorVal);
-		setSensorMinMax(sensorVal,sensorMinVal,sensorMaxVal);
-    int sum = 0;
-    for (int i = 0; i < LS_NUM_SENSORS; i++) {
-      sum += sensorVal[i];
-    }
-    sensorValAvgSum += sum / LS_NUM_SENSORS;
-	}
-  baseline = sensorValAvgSum / 100 - 400;
-  Serial.println(baseline);
-
-	/* Disable both motors */
-	disableMotor(BOTH_MOTORS);
-}
-
-void turnAround() {
-//  setMotorDirection(LEFT_MOTOR,MOTOR_DIR_BACKWARD);
-//  setMotorSpeed(BOTH_MOTORS,normalSpeed/2);
-//  delay(900);
-//  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
-  turnByDegrees(180, normalSpeed/2);
-}
-
-void hop() {
-//  setMotorDirection(LEFT_MOTOR,MOTOR_DIR_BACKWARD);
-//  setMotorSpeed(BOTH_MOTORS,normalSpeed/2);
-//  delay(450);
-  turnByDegrees(180, normalSpeed/2);
-  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
-  delay(100);
-}
-
-int dist() {
-  int distance;
-  int duration;
-  // Clears the trigPin condition
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  // Reads the echoPin, returns the sound wave travel time in microseconds
-  duration = pulseIn(echoPin, HIGH);
-  // Calculating the distance
-  distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
-  return distance;
-}
-
-bool lostLine() {
-  if (dist() < 9) {
-    digitalWrite(debugpin, HIGH);
-    delay(500);
-    digitalWrite(debugpin, LOW);
-    return true;
-  }
-  for (int i = 0; i < LS_NUM_SENSORS; i++) {
-    if (sensorVal[i] < baseline) {
-      return false;
-    }
-  }
-  Serial.println("Lost");
-  return true;
-}
-
 //--------------------------------------------------------------------------------------
 bool isCalibrationComplete = false;
 
@@ -263,9 +164,110 @@ void loop()
     } else {
       turnAround();
     }
+    turn_or_jump++;
   }
 }
 //---------------------------------------------------------------------------------------
+
+
+void floorCalibration() {
+  /* Place Robot On Floor (no line) */
+  delay(2000);
+  String btnMsg = "Push left button on Launchpad to begin calibration.\n";
+  btnMsg += "Make sure the robot is on the floor away from the line.\n";
+  /* Wait until button is pressed to start robot */
+  waitBtnPressed(LP_LEFT_BTN,btnMsg,RED_LED);
+    
+  delay(1000);
+
+  Serial.println("Running calibration on floor");
+  simpleCalibrate();
+  Serial.println("Reading floor values complete");
+
+  btnMsg = "Push left button on Launchpad to begin line following.\n";
+  btnMsg += "Make sure the robot is on the line.\n";
+  /* Wait until button is pressed to start robot */
+  waitBtnPressed(LP_LEFT_BTN,btnMsg,RED_LED);
+  delay(1000);
+
+  enableMotor(BOTH_MOTORS);
+}
+
+void simpleCalibrate() {
+  /* Set both motors direction forward */
+  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
+  /* Enable both motors */
+  enableMotor(BOTH_MOTORS);
+  /* Set both motors speed 20 */
+  setMotorSpeed(BOTH_MOTORS,20);
+
+  int sensorValAvgSum = 0;
+
+  for(int x = 0;x<100;x++){
+    readLineSensor(sensorVal);
+    setSensorMinMax(sensorVal,sensorMinVal,sensorMaxVal);
+    int sum = 0;
+    for (int i = 0; i < LS_NUM_SENSORS; i++) {
+      sum += sensorVal[i];
+    }
+    sensorValAvgSum += sum / LS_NUM_SENSORS;
+  }
+  baseline = sensorValAvgSum / 100 - 400;
+  Serial.println(baseline);
+
+  /* Disable both motors */
+  disableMotor(BOTH_MOTORS);
+}
+
+void turnAround() {
+//  setMotorDirection(LEFT_MOTOR,MOTOR_DIR_BACKWARD);
+//  setMotorSpeed(BOTH_MOTORS,normalSpeed/2);
+//  delay(900);
+//  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
+  turnByDegrees(180, normalSpeed/2);
+}
+
+void hop() {
+//  setMotorDirection(LEFT_MOTOR,MOTOR_DIR_BACKWARD);
+//  setMotorSpeed(BOTH_MOTORS,normalSpeed/2);
+//  delay(450);
+  turnByDegrees(180, normalSpeed/2);
+  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
+  delay(100);
+}
+
+int dist() {
+  int distance;
+  int duration;
+  // Clears the trigPin condition
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH);
+  // Calculating the distance
+  distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
+  return distance;
+}
+
+bool lostLine() {
+  if (dist() < 9) {
+    digitalWrite(debugpin, HIGH);
+    delay(500);
+    digitalWrite(debugpin, LOW);
+    return true;
+  }
+  for (int i = 0; i < LS_NUM_SENSORS; i++) {
+    if (sensorVal[i] < baseline) {
+      return false;
+    }
+  }
+  Serial.println("Lost");
+  return true;
+}
 
 void turnByDegrees(float deg, int speed){
   float degTotal = 0;
@@ -307,7 +309,4 @@ void turnByDegrees(float deg, int speed){
     delay(10);
     
   }
-  disableMotor(BOTH_MOTORS);
-  delay(10);
-  
 }

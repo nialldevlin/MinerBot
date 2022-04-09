@@ -230,7 +230,9 @@ void hop() {
   turnByDegrees(-110, normalSpeed/2);
   setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
   setMotorSpeed(BOTH_MOTORS,normalSpeed);
-  delay(300);
+  //delay(300);
+  delayUntilLine(3000);
+  
 }
 
 int dist() {
@@ -257,15 +259,22 @@ bool lostLine() {
   int numBelow = 0;
   for (int i = 0; i < LS_NUM_SENSORS; i++) {
     if (sensorVal[i] < baseline) {
-      numBelow++;
+        return false;
     }
   }
-  if (numBelow > 0 && numBelow < 5) {
-    return false;
-  } else if(numBelow >= 5) {
-    turnByDegrees(-45, normalSpeed/2);
-    return false;
-    beep();
+  Serial.println("Lost");
+  return true;
+}
+
+bool lostLine(int mod) {
+  if (dist() < 9) {
+    return true;
+  }
+  int numBelow = 0;
+  for (int i = 0; i < LS_NUM_SENSORS; i++) {
+    if (sensorVal[i] < baseline + mod) {
+        return false;
+    }
   }
   Serial.println("Lost");
   return true;
@@ -315,8 +324,26 @@ void turnByDegrees(float deg, int speed){
   }
 }
 
+void delayUntilLine(int maxTime){
+  int i = 0;
+  while(lostLine(200) && i < maxTime){
+    delay(10);
+    i++;
+    
+  }
+}
+
 void beep() {
+  disableMotor(BOTH_MOTORS);
   digitalWrite(debugpin, HIGH);
   delay(500);
   digitalWrite(debugpin, LOW);
+  enableMotor(BOTH_MOTORS);
+}
+
+void printColorVals(){
+  for (int i = 0; i < LS_NUM_SENSORS; i++) {
+    Serial.print((String)sensorVal[i] + "\t");
+  }
+  Serial.println();
 }

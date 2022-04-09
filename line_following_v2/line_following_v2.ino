@@ -37,6 +37,10 @@
  * This example code is in the public domain.
  */
 
+#define echoPin A13
+#define trigPin A14
+#define debugpin A6
+
 uint16_t sensorVal[LS_NUM_SENSORS];
 uint16_t sensorCalVal[LS_NUM_SENSORS];
 uint16_t sensorMaxVal[LS_NUM_SENSORS];
@@ -87,6 +91,11 @@ void setup()
   myPID.SetMode(AUTOMATIC);
   myPID.SetControllerDirection(REVERSE);
 
+  //Distance sensor
+  pinMode(trigPin, OUTPUT); // Sets the trigPin as an OUTPUT
+  pinMode(echoPin, INPUT); // Sets the echoPin as an INPUT
+  pinMode(debugpin, OUTPUT);
+
   //MPU sensors
   Wire.begin();
   Wire.beginTransmission(MPU6050_ADDR);
@@ -94,6 +103,9 @@ void setup()
   Wire.write(0); // wake up!
   Wire.endTransmission(true);
 
+  digitalWrite(debugpin, HIGH);
+  delay(500);
+  digitalWrite(debugpin, LOW);
 }
 
 void floorCalibration() {
@@ -162,7 +174,30 @@ void hop() {
   delay(100);
 }
 
+int dist() {
+  int distance;
+  int duration;
+  // Clears the trigPin condition
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH);
+  // Calculating the distance
+  distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
+  return distance;
+}
+
 bool lostLine() {
+  if (dist() < 9) {
+    digitalWrite(debugpin, HIGH);
+    delay(500);
+    digitalWrite(debugpin, LOW);
+    return true;
+  }
   for (int i = 0; i < LS_NUM_SENSORS; i++) {
     if (sensorVal[i] > baseline) {
       return false;
@@ -174,6 +209,7 @@ bool lostLine() {
 
 //--------------------------------------------------------------------------------------
 bool isCalibrationComplete = false;
+
 void loop()
 {
 
@@ -181,7 +217,7 @@ void loop()
 	 *  DARK_LINE  if your floor is lighter than your line
 	 *  LIGHT_LINE if your floor is darker than your line
 	 */
-	uint8_t lineColor = DARK_LINE;
+	uint8_t lineColor = LIGHT_LINE;
 
 	/* Run this setup only once */
 	if(isCalibrationComplete == false) {

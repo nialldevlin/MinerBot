@@ -164,7 +164,6 @@ void loop()
     } else {
       turnAround();
     }
-    turn_or_jump++;
   }
 }
 //---------------------------------------------------------------------------------------
@@ -220,20 +219,17 @@ void simpleCalibrate() {
 }
 
 void turnAround() {
-//  setMotorDirection(LEFT_MOTOR,MOTOR_DIR_BACKWARD);
-//  setMotorSpeed(BOTH_MOTORS,normalSpeed/2);
-//  delay(900);
-//  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
+  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
+  setMotorSpeed(BOTH_MOTORS,normalSpeed);
+  delay(100);
   turnByDegrees(180, normalSpeed/2);
 }
 
 void hop() {
-//  setMotorDirection(LEFT_MOTOR,MOTOR_DIR_BACKWARD);
-//  setMotorSpeed(BOTH_MOTORS,normalSpeed/2);
-//  delay(450);
-  turnByDegrees(180, normalSpeed/2);
+  turnByDegrees(90, normalSpeed/2);
   setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
-  delay(100);
+  setMotorSpeed(BOTH_MOTORS,normalSpeed);
+  delay(200);
 }
 
 int dist() {

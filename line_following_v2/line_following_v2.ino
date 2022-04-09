@@ -317,8 +317,6 @@ void turnByDegrees(float deg, int speed){
     
     degTotal += (gyroDeg / 1000) * (millis() - previousMil);
     previousMil = millis();
-    Serial.println((String)degTotal + "\t" + (String)(gyroZ/131.0));
-
     delay(10);
     
   }

@@ -49,20 +49,25 @@ uint16_t sensorMinVal[LS_NUM_SENSORS];
 uint16_t normalSpeed = 20;
 
 //TUNING VALS
-float ps = 0.003;
+float ps = 0.006;
 float is = 0.0;
-float ds = 0.001;
+float ds = 0.002;
 
-float pl = 0.03;
+float pl = 0.06;
 float il = 0.0;
-float dl = 0.01;
+float dl = 0.02;
 
 int baseline;
-int turn_or_jump = 0;
+
+/* Valid values are either:
+ *  DARK_LINE  if your floor is lighter than your line
+ *  LIGHT_LINE if your floor is darker than your line
+ */
+uint8_t lineColor = LIGHT_LINE;
 
 double Setpoint, Input, Output;
 
-PID myPID(&Input, &Output, &Setpoint, ps, is, ds, DIRECT);
+PID myPID(&Input, &Output, &Setpoint, pl, il, dl, DIRECT);
 
 //mpu
 #include "Wire.h" 
@@ -87,7 +92,7 @@ void setup()
   Setpoint = 3500;
   Input = 0;
   //turn the PID on
-  myPID.SetOutputLimits(-1*normalSpeed/2, normalSpeed/2);
+  myPID.SetOutputLimits(-1*normalSpeed/4, normalSpeed/4);
   myPID.SetMode(AUTOMATIC);
   myPID.SetControllerDirection(REVERSE);
 
@@ -104,26 +109,13 @@ void setup()
   Wire.endTransmission(true);
 
   beep();
+
+  floorCalibration();
 }
 
 //--------------------------------------------------------------------------------------
-bool isCalibrationComplete = false;
-
 void loop()
 {
-
-	/* Valid values are either:
-	 *  DARK_LINE  if your floor is lighter than your line
-	 *  LIGHT_LINE if your floor is darker than your line
-	 */
-	uint8_t lineColor = LIGHT_LINE;
-
-	/* Run this setup only once */
-	if(isCalibrationComplete == false) {
-		floorCalibration();
-		isCalibrationComplete = true;
-	}
-
 	readLineSensor(sensorVal);
 	readCalLineSensor(sensorVal,
 					  sensorCalVal,
@@ -131,43 +123,21 @@ void loop()
 					  sensorMaxVal,
 					  lineColor);
 
-	uint32_t linePos = getLinePosition(sensorCalVal,lineColor);
-  for (int i = 0; i < LS_NUM_SENSORS; i++) {
-    Serial.print(sensorVal[i]);
-    Serial.print(" ");
-  }
-  Serial.println();
-  Serial.println();
-  if ((3500 - linePos) < 300)
-  {  //we're close to setpoint, use conservative tuning parameters
-    myPID.SetTunings(ps, is, ds);
-  }
-  else
-  {
-     //we're far from setpoint, use aggressive tuning parameters
-     myPID.SetTunings(pl, il, dl);
-  }
-  Input = linePos;
-  myPID.Compute();
+	Input = getLinePosition(sensorCalVal,lineColor);
   Serial.print("Position: ");
-  Serial.print(linePos);
-  Serial.print(" PID Val: ");
-  Serial.print(Output);
+  Serial.println(Input);
+  for (int i = 0; i < LS_NUM_SENSORS; i++) {
+    Serial.print((String)sensorVal[i] + "\t");
+  }
   Serial.println();
+  myPID.Compute();
   setMotorSpeed(LEFT_MOTOR,normalSpeed + Output);
   setMotorSpeed(RIGHT_MOTOR,normalSpeed - Output);
-  if (lostLine()) {
-    setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
-    setMotorSpeed(BOTH_MOTORS,normalSpeed);
-    delay(300);
-    if (dist() > 13) {
-      hop();
-      beep();
-    } else {
-      turnAround();
-      beep();
-      beep();
-    }
+  if(lostLine()){
+    hop();
+  }
+  if(dist() < 13) {
+    turnAround();
   }
 }
 //---------------------------------------------------------------------------------------
@@ -223,16 +193,22 @@ void simpleCalibrate() {
 }
 
 void turnAround() {
+  beep();
+  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
+  setMotorSpeed(BOTH_MOTORS,normalSpeed);
+  delay(300);
   turnByDegrees(180, normalSpeed/2);
 }
 
 void hop() {
-  turnByDegrees(-110, normalSpeed/2);
+  turnByDegrees(45, normalSpeed/2);
   setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
   setMotorSpeed(BOTH_MOTORS,normalSpeed);
-  //delay(300);
-  delayUntilLine(3000);
-  
+  delay(300);
+  turnByDegrees(45, normalSpeed/2);
+  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
+  setMotorSpeed(BOTH_MOTORS,normalSpeed);
+  delay(300);
 }
 
 int dist() {
@@ -253,30 +229,12 @@ int dist() {
 }
 
 bool lostLine() {
-  if (dist() < 9) {
-    return true;
-  }
   int numBelow = 0;
   for (int i = 0; i < LS_NUM_SENSORS; i++) {
     if (sensorVal[i] < baseline) {
         return false;
     }
   }
-  Serial.println("Lost");
-  return true;
-}
-
-bool lostLine(int mod) {
-  if (dist() < 9) {
-    return true;
-  }
-  int numBelow = 0;
-  for (int i = 0; i < LS_NUM_SENSORS; i++) {
-    if (sensorVal[i] < baseline + mod) {
-        return false;
-    }
-  }
-  Serial.println("Lost");
   return true;
 }
 
@@ -284,19 +242,7 @@ void turnByDegrees(float deg, int speed){
   float degTotal = 0;
   float previousMil = millis();
   bool turnRight = deg > 0;
-  while(abs(degTotal) < abs(deg*DEGREE_MOD)){
-    enableMotor(BOTH_MOTORS);
-    setMotorSpeed(RIGHT_MOTOR, speed);
-    setMotorSpeed(LEFT_MOTOR, speed);
-    if(turnRight){
-      setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
-      setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
-    }
-    else{
-      setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
-      setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
-    }
-    
+  while(abs(degTotal) < abs(deg*DEGREE_MOD)){ 
     Wire.beginTransmission(MPU6050_ADDR);
     Wire.write(0x3B); // starting with register 0x3B (ACCEL_XOUT_H)
     Wire.endTransmission(false); // the parameter indicates that the Arduino will send a restart. 
@@ -313,20 +259,22 @@ void turnByDegrees(float deg, int speed){
     gyroZ = Wire.read()<<8 | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
     float gyroDeg = (gyroZ / 131.0);
     gyroDeg = (abs(gyroDeg) < 1)? 0: gyroDeg;
-
     
     degTotal += (gyroDeg / 1000) * (millis() - previousMil);
     previousMil = millis();
-    delay(10);
-    
-  }
-}
 
-void delayUntilLine(int maxTime){
-  int i = 0;
-  while(lostLine(200) && i < maxTime){
+    if(turnRight){
+      setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_BACKWARD);
+      setMotorDirection(LEFT_MOTOR, MOTOR_DIR_FORWARD);
+    }
+    else{
+      setMotorDirection(LEFT_MOTOR, MOTOR_DIR_BACKWARD);
+      setMotorDirection(RIGHT_MOTOR, MOTOR_DIR_FORWARD);
+    }
+    setMotorSpeed(RIGHT_MOTOR, speed);
+    setMotorSpeed(LEFT_MOTOR, speed);
+    
     delay(10);
-    i++;
     
   }
 }
@@ -337,11 +285,4 @@ void beep() {
   delay(500);
   digitalWrite(debugpin, LOW);
   enableMotor(BOTH_MOTORS);
-}
-
-void printColorVals(){
-  for (int i = 0; i < LS_NUM_SENSORS; i++) {
-    Serial.print((String)sensorVal[i] + "\t");
-  }
-  Serial.println();
 }

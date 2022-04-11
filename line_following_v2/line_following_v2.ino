@@ -46,12 +46,12 @@ uint16_t sensorCalVal[LS_NUM_SENSORS];
 uint16_t sensorMaxVal[LS_NUM_SENSORS];
 uint16_t sensorMinVal[LS_NUM_SENSORS];
 
-uint16_t normalSpeed = 20;
+uint16_t normalSpeed = 10;
 
 //TUNING VALS
-float ps = 0.006;
+float ps = 0.003;
 float is = 0.0;
-float ds = 0.002;
+float ds = 0.001;
 
 float pl = 0.06;
 float il = 0.0;
@@ -67,7 +67,7 @@ uint8_t lineColor = LIGHT_LINE;
 
 double Setpoint, Input, Output;
 
-PID myPID(&Input, &Output, &Setpoint, pl, il, dl, DIRECT);
+PID myPID(&Input, &Output, &Setpoint, ps, is, ds, DIRECT);
 
 //mpu
 #include "Wire.h" 
@@ -92,7 +92,7 @@ void setup()
   Setpoint = 3500;
   Input = 0;
   //turn the PID on
-  myPID.SetOutputLimits(-1*normalSpeed/4, normalSpeed/4);
+  myPID.SetOutputLimits(-1*normalSpeed/2, normalSpeed/2);
   myPID.SetMode(AUTOMATIC);
   myPID.SetControllerDirection(REVERSE);
 
@@ -134,10 +134,10 @@ void loop()
   setMotorSpeed(LEFT_MOTOR,normalSpeed + Output);
   setMotorSpeed(RIGHT_MOTOR,normalSpeed - Output);
   if(lostLine()){
-    hop();
+    disableMotor(BOTH_MOTORS);
   }
   if(dist() < 13) {
-    turnAround();
+    disableMotor(BOTH_MOTORS);
   }
 }
 //---------------------------------------------------------------------------------------
@@ -193,7 +193,6 @@ void simpleCalibrate() {
 }
 
 void turnAround() {
-  beep();
   setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
   setMotorSpeed(BOTH_MOTORS,normalSpeed);
   delay(300);

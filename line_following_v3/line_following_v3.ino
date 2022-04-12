@@ -50,6 +50,7 @@ void setup() {
   Wire.write(0); // wake up!
   Wire.endTransmission(true);
   waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
+  enableMotor(BOTH_MOTORS);
 }
 
 void loop() {
@@ -84,6 +85,7 @@ uint32_t countForDistance(float wheel_diam, uint16_t cnt_per_rev, uint32_t dista
 }
 
 void goInches(uint32_t inches, int s) {
+  enableMotor(BOTH_MOTORS);
   int totalCount = 0;
   /* Amount of encoder pulses needed to achieve distance */
   uint16_t x = countForDistance(wheelDiameter, cntPerRevolution, inches);

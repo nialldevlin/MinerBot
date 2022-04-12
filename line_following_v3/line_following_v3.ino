@@ -6,7 +6,13 @@
 #include <RSLK_Pins.h>
 #include <SimpleRSLK.h>
 
-#include "Wire.h" 
+#include "Wire.h"
+
+//Encoder
+/* Diameter of Romi wheels in inches */
+float wheelDiameter = 2.7559055;
+/* Number of encoder (rising) pulses every time the wheel turns completely */
+int cntPerRevolution = 360;
 
 //Color Sensor
 uint16_t sensorVal[LS_NUM_SENSORS];
@@ -23,7 +29,9 @@ int diff = 10;
 //MPU
 #define MPU6050_ADDR 0x68 // Alternatively set AD0 to HIGH  --> Address = 0x69
 float DEGREE_MOD = 0.9;
-int16_t accX, accY, accZ, gyroX, gyroY, gyroZ, tRaw; 
+int16_t accX, accY, accZ, gyroX, gyroY, gyroZ, tRaw;
+
+bool found = true; //On the line
 
 void setup() {
   // put your setup code here, to run once:
@@ -41,37 +49,12 @@ void setup() {
   Wire.write(0x6B); // PWR_MGMT_1 register
   Wire.write(0); // wake up!
   Wire.endTransmission(true);
-  
-  //Calibrate line sensor
-  clearMinMax(sensorMinVal,sensorMaxVal);
-  floorCalibration();
+  waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly: 
-  readLineSensor(sensorVal);
-  readCalLineSensor(sensorVal,
-            sensorCalVal,
-            sensorMinVal,
-            sensorMaxVal,
-            lineColor);
-
-  uint32_t linePos = getLinePosition(sensorCalVal,lineColor);
-
-  if(lostLine()) {
-    hop();
-  }
-
-  if(linePos > 0 && linePos < 3000) {
-    setMotorSpeed(LEFT_MOTOR,speed);
-    setMotorSpeed(RIGHT_MOTOR,speed + diff);
-  } else if(linePos > 3500) {
-    setMotorSpeed(LEFT_MOTOR,speed + diff);
-    setMotorSpeed(RIGHT_MOTOR,speed);
-  } else {
-    setMotorSpeed(LEFT_MOTOR,speed);
-    setMotorSpeed(RIGHT_MOTOR,speed);
-  }
+  goInches(10, speed);
+  turnByDegrees(45, speed);
 }
 
 bool lostLine() {
@@ -84,20 +67,39 @@ bool lostLine() {
   return true;
 }
 
-void hop() {
-  turnByDegrees(45, speed/2);
-  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
-  setMotorSpeed(BOTH_MOTORS,speed);
-  delay(300);
-  turnByDegrees(45, speed/2);
-  goToLine();
+/* The distance the wheel turns per revolution is equal to the diameter * PI.
+ * The distance the wheel turns per encoder pulse is equal to the above divided
+ * by the number of pulses per revolution.
+ */
+float distanceTraveled(float wheel_diam, uint16_t cnt_per_rev, uint8_t current_cnt) {
+  float temp = (wheel_diam * PI * current_cnt) / cnt_per_rev;
+  return temp;
 }
 
-void goToLine() {
+
+uint32_t countForDistance(float wheel_diam, uint16_t cnt_per_rev, uint32_t distance) {
+  float temp = (wheel_diam * PI) / cnt_per_rev;
+  temp = distance / temp;
+  return int(temp);
+}
+
+void goInches(uint32_t inches, int s) {
+  int totalCount = 0;
+  /* Amount of encoder pulses needed to achieve distance */
+  uint16_t x = countForDistance(wheelDiameter, cntPerRevolution, inches);
+  x = 0.95 * x;
+  /* Set the encoder pulses count back to zero */
+  resetLeftEncoderCnt();
+  resetRightEncoderCnt();
+  /* Cause the robot to drive forward */
   setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
-  setMotorSpeed(BOTH_MOTORS,speed);
-  while(lostLine()){
-    delay(1);
+  enableMotor(BOTH_MOTORS);
+  setMotorSpeed(LEFT_MOTOR,s-1);
+  setMotorSpeed(RIGHT_MOTOR,s);
+  /* Drive motor until it has received x pulses */
+  while(totalCount < x)
+  {
+    totalCount = getEncoderLeftCnt();
   }
   disableMotor(BOTH_MOTORS);
 }
@@ -106,6 +108,7 @@ void turnByDegrees(float deg, int speed){
   float degTotal = 0;
   float previousMil = millis();
   bool turnRight = deg > 0;
+  enableMotor(BOTH_MOTORS);
   while(abs(degTotal) < abs(deg*DEGREE_MOD)){ 
     Wire.beginTransmission(MPU6050_ADDR);
     Wire.write(0x3B); // starting with register 0x3B (ACCEL_XOUT_H)
@@ -139,8 +142,8 @@ void turnByDegrees(float deg, int speed){
     setMotorSpeed(LEFT_MOTOR, speed);
     
     delay(10);
-    
   }
+  disableMotor(BOTH_MOTORS);
 }
 
 void floorCalibration() {

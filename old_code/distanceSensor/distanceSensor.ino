@@ -17,9 +17,9 @@
 // Tested on 17 September 2019
 // ---------------------------------------------------------------- //
 
-#define echoPin 81 // attach pin D2 Arduino to pin Echo of HC-SR04
-#define trigPin 19 //attach pin D3 Arduino to pin Trig of HC-SR04
-#define buzzPin 63
+#define echoPin A14 // attach pin D2 Arduino to pin Echo of HC-SR04
+#define trigPin A11 //attach pin D3 Arduino to pin Trig of HC-SR04
+#define buzzPin A6
 
 // defines variables
 long duration; // variable for the duration of sound wave travel
@@ -52,4 +52,5 @@ void loop() {
   Serial.print("Distance: ");
   Serial.print(distance);
   Serial.println(" cm");
+  delay(10);
 }

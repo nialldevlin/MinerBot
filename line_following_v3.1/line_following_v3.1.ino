@@ -10,10 +10,16 @@
 
 #define debugpin A6
 #define PHOTO_PIN A12 //arbitrary
+#define IRPIN A11
 
 float HOME_DIST = 26;
 float CORNER_DIST = 24;
 float SIDE_DIST = 20;
+
+float LEFT_MOD = 1.0;
+float RIGHT_MOD = 1.25;
+
+float MIN_DIST = 10;
 
 //Encoder
 /* Diameter of Romi wheels in inches */
@@ -56,7 +62,8 @@ void setup() {
   Wire.write(0x6B); // PWR_MGMT_1 register
   Wire.write(0); // wake up!
   Wire.endTransmission(true);
-  waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
+  //waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
+  while(analogRead(IRPIN) < 100);
   enableMotor(BOTH_MOTORS);
   goInches(26, speed);
   turnByDegrees(-135, speed);
@@ -126,7 +133,25 @@ uint32_t countForDistance(float wheel_diam, uint16_t cnt_per_rev, uint32_t dista
   return int(temp);
 }
 
-void goInches(uint32_t inches, int s) {
+void goToDist(int dist, int s){
+  enableMotor(BOTH_MOTORS);
+  while(abs(dist - dist()) < 1){
+    if(dist() > dist){
+      setMotorDirection(BOTH_MOTORS, MOTOR_DIR_FORWARD);
+      setMotorSpeed(LEFT_MOTOR,s*LEFT_MOD);
+      setMotorSpeed(RIGHT_MOTOR,s*RIGHT_MOD);
+    }
+    else if(dist() < dist){
+      setMotorDirection(BOTH_MOTORS, MOTOR_DIR_BACKWARD);
+      setMotorSpeed(LEFT_MOTOR,s*LEFT_MOD);
+      setMotorSpeed(RIGHT_MOTOR,s*RIGHT_MOD);
+    }
+  }
+  
+  disableMotor(BOTH_MOTORS);
+}
+
+bool goInches(uint32_t inches, int s) {
   enableMotor(BOTH_MOTORS);
   int totalCount = 0;
   /* Amount of encoder pulses needed to achieve distance */
@@ -139,8 +164,8 @@ void goInches(uint32_t inches, int s) {
   if(inches > 0)  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
   else setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
   enableMotor(BOTH_MOTORS);
-  setMotorSpeed(LEFT_MOTOR,s-1);
-  setMotorSpeed(RIGHT_MOTOR,s);
+  setMotorSpeed(LEFT_MOTOR,s*LEFT_MOD);
+  setMotorSpeed(RIGHT_MOTOR,s*RIGHT_MOD);
   /* Drive motor until it has received x pulses */
   while(totalCount < x)
   {

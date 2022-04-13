@@ -16,7 +16,7 @@ float CORNER_DIST = 24;
 float SIDE_DIST = 20;
 
 float LEFT_MOD = 1.0;
-float RIGHT_MOD = 1.0;
+float RIGHT_MOD = 1.25;
 
 //Encoder
 /* Diameter of Romi wheels in inches */
@@ -45,8 +45,6 @@ bool found = true; //On the line
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
-  // put your setup code here, to run once:
   Serial.begin(115200);
 
   setupRSLK();
@@ -64,7 +62,7 @@ void setup() {
   waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
 
   beep();
-  goInches(24, speed);
+  goInches(12, speed);
 }
 
 void loop() {

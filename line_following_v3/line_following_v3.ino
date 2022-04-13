@@ -8,6 +8,8 @@
 
 #include "Wire.h"
 
+#define debugpin A6
+
 //Encoder
 /* Diameter of Romi wheels in inches */
 float wheelDiameter = 2.7559055;
@@ -51,11 +53,25 @@ void setup() {
   Wire.endTransmission(true);
   waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
   enableMotor(BOTH_MOTORS);
+  goInches(26, speed);
+  turnByDegrees(-135, speed);
+  for(int i = 0; i < 4; i++){
+    goInches(24, speed);
+    delay(500);
+    goInches(-24, speed);
+    turnByDegrees(45, speed/2);
+    goInches(20, speed);
+    delay(500);
+    goInches(-20, speed);
+    turnByDegrees(45, speed/2);
+  }
 }
 
 void loop() {
-  goInches(10, speed);
-  turnByDegrees(45, speed);
+//  goInches(10, speed);
+//  turnByDegrees(45, speed);
+  beep();
+  delay(1000);
 }
 
 bool lostLine() {
@@ -88,13 +104,14 @@ void goInches(uint32_t inches, int s) {
   enableMotor(BOTH_MOTORS);
   int totalCount = 0;
   /* Amount of encoder pulses needed to achieve distance */
-  uint16_t x = countForDistance(wheelDiameter, cntPerRevolution, inches);
+  uint16_t x = countForDistance(wheelDiameter, cntPerRevolution, abs(inches));
   x = 0.95 * x;
   /* Set the encoder pulses count back to zero */
   resetLeftEncoderCnt();
   resetRightEncoderCnt();
   /* Cause the robot to drive forward */
-  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
+  if(inches > 0)  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
+  else setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
   enableMotor(BOTH_MOTORS);
   setMotorSpeed(LEFT_MOTOR,s-1);
   setMotorSpeed(RIGHT_MOTOR,s);
@@ -193,4 +210,12 @@ void simpleCalibrate() {
   baseline = sensorValAvgSum / 100 - 400;
   /* Disable both motors */
   disableMotor(BOTH_MOTORS);
+}
+
+void beep() {
+  disableMotor(BOTH_MOTORS);
+  digitalWrite(debugpin, HIGH);
+  delay(500);
+  digitalWrite(debugpin, LOW);
+  enableMotor(BOTH_MOTORS);
 }

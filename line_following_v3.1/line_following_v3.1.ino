@@ -64,14 +64,15 @@ void setup() {
   Wire.write(0x6B); // PWR_MGMT_1 register
   Wire.write(0); // wake up!
   Wire.endTransmission(true);
-  //waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
-  while(analogRead(IRPIN) < 100);
+  waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
+  //while(analogRead(IRPIN) < 100);
   enableMotor(BOTH_MOTORS);
-  goInches(26, speed);
+  int startDist = 22.5; //57cm 22.5in
+  goToDist(startDist/2, speed);
   turnByDegrees(-135, speed);
   int totalDegrees = 0;
   for(int i = 0; i < 4; i++){
-    int startDist = dist();
+    startDist = dist();
     goToDist(MIN_DIST, speed);
     delay(500);
     if(foundBall()){
@@ -155,7 +156,7 @@ void goToDist(int distance, int s){
   disableMotor(BOTH_MOTORS);
 }
 
-bool goInches(uint32_t inches, int s) {
+bool goInches(float inches, int s) {
   enableMotor(BOTH_MOTORS);
   int totalCount = 0;
   /* Amount of encoder pulses needed to achieve distance */

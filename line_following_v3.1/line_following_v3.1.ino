@@ -8,6 +8,8 @@
 
 #include "Wire.h"
 
+#define echoPin 11
+#define trigPin 31
 #define debugpin A6
 #define PHOTO_PIN A12 //arbitrary
 #define IRPIN A11
@@ -133,15 +135,15 @@ uint32_t countForDistance(float wheel_diam, uint16_t cnt_per_rev, uint32_t dista
   return int(temp);
 }
 
-void goToDist(int dist, int s){
+void goToDist(int distance, int s){
   enableMotor(BOTH_MOTORS);
-  while(abs(dist - dist()) < 1){
-    if(dist() > dist){
+  while(abs((distance - dist())) > 1){
+    if(dist() > distance){
       setMotorDirection(BOTH_MOTORS, MOTOR_DIR_FORWARD);
       setMotorSpeed(LEFT_MOTOR,s*LEFT_MOD);
       setMotorSpeed(RIGHT_MOTOR,s*RIGHT_MOD);
     }
-    else if(dist() < dist){
+    else if(dist() < distance){
       setMotorDirection(BOTH_MOTORS, MOTOR_DIR_BACKWARD);
       setMotorSpeed(LEFT_MOTOR,s*LEFT_MOD);
       setMotorSpeed(RIGHT_MOTOR,s*RIGHT_MOD);
@@ -172,6 +174,23 @@ bool goInches(uint32_t inches, int s) {
     totalCount = getEncoderLeftCnt();
   }
   disableMotor(BOTH_MOTORS);
+}
+
+int dist() {
+  int distance;
+  int duration;
+  // Clears the trigPin condition
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH);
+  // Calculating the distance
+  distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
+  return distance;
 }
 
 void turnByDegrees(float deg, int speed){

@@ -71,23 +71,25 @@ void setup() {
   turnByDegrees(-135, speed);
   int totalDegrees = 0;
   for(int i = 0; i < 4; i++){
-    goInches(SIDE_DIST, speed);
+    int startDist = dist();
+    goToDist(MIN_DIST, speed);
     delay(500);
     if(foundBall()){
       goHome(totalDegrees);
       break;
     }
-    goInches(-SIDE_DIST, speed);
+    goToDist(startDist, speed);
     turnByDegrees(45, speed/2);
     totalDegrees += 45;
-    goInches(CORNER_DIST, speed);
+    startDist = dist();
+    goToDist(MIN_DIST, speed);
     delay(500);
     if(foundBall()){
       goHome(totalDegrees);
       break;
     }
     if(i == 4) continue;
-    goInches(-CORNER_DIST, speed);
+    goToDist(startDist, speed);
     turnByDegrees(45, speed/2);
     totalDegrees += 45;
   }

@@ -9,6 +9,11 @@
 #include "Wire.h"
 
 #define debugpin A6
+#define PHOTO_PIN A12 //arbitrary
+
+float HOME_DIST = 26;
+float CORNER_DIST = 24;
+float SIDE_DIST = 20;
 
 //Encoder
 /* Diameter of Romi wheels in inches */
@@ -57,30 +62,42 @@ void setup() {
   turnByDegrees(-135, speed);
   int totalDegrees = 0;
   for(int i = 0; i < 4; i++){
-    goInches(20, speed);
+    goInches(SIDE_DIST, speed);
     delay(500);
     if(foundBall()){
       goHome(totalDegrees);
+      break;
     }
-    goInches(-20, speed);
+    goInches(-SIDE_DIST, speed);
     turnByDegrees(45, speed/2);
-    goInches(24, speed);
+    totalDegrees += 45;
+    goInches(CORNER_DIST, speed);
     delay(500);
     if(foundBall()){
       goHome(totalDegrees);
+      break;
     }
     if(i == 4) continue;
-    goInches(-24, speed);
+    goInches(-CORNER_DIST, speed);
     turnByDegrees(45, speed/2);
+    totalDegrees += 45;
   }
+  goInches(4, speed);
 }
 
 
 void loop() {
-//  goInches(10, speed);
-//  turnByDegrees(45, speed);
   beep();
   delay(1000);
+}
+
+void goHome(int currentDeg){
+  turnByDegrees(315-currentDeg, speed);
+  goInches(HOME_DIST, speed);
+}
+
+bool foundBall(){
+  return analogRead(PHOTO_PIN) < 100;
 }
 
 bool lostLine() {

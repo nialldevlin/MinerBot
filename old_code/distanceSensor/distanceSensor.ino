@@ -17,9 +17,9 @@
 // Tested on 17 September 2019
 // ---------------------------------------------------------------- //
 
-#define echoPin 37 // attach pin D2 Arduino to pin Echo of HC-SR04
-#define trigPin 36 //attach pin D3 Arduino to pin Trig of HC-SR04
-#define buzzPin 8.5
+#define echoPin 11 // attach pin D2 Arduino to pin Echo of HC-SR04
+#define trigPin 31 //attach pin D3 Arduino to pin Trig of HC-SR04
+#define buzzPin 5
 
 // defines variables
 long duration; // variable for the duration of sound wave travel

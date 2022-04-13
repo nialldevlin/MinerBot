@@ -145,6 +145,7 @@ void turnByDegrees(float deg, int speed){
     gyroZ = Wire.read()<<8 | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
     float gyroDeg = (gyroZ / 131.0);
     gyroDeg = (abs(gyroDeg) < 1)? 0: gyroDeg;
+    Serial.println(gyroDeg);
     
     degTotal += (gyroDeg / 1000) * (millis() - previousMil);
     previousMil = millis();

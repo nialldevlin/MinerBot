@@ -10,16 +10,13 @@
 
 #define echoPin 11
 #define trigPin 31
-#define debugpin A6
-#define PHOTO_PIN A12 //arbitrary
+#define debugpin 12
+#define PHOTO_PIN 6 //arbitrary
 #define IRPIN A11
 
 float HOME_DIST = 26;
 float CORNER_DIST = 24;
 float SIDE_DIST = 20;
-
-float LEFT_MOD = 1.0;
-float RIGHT_MOD = 1.25;
 
 float MIN_DIST = 10;
 
@@ -40,18 +37,18 @@ int baseline;
 //Speed
 int speed = 15;
 int diff = 10;
+int MOD = 0.97;
 
 //MPU
 #define MPU6050_ADDR 0x68 // Alternatively set AD0 to HIGH  --> Address = 0x69
 float DEGREE_MOD = 0.9;
 int16_t accX, accY, accZ, gyroX, gyroY, gyroZ, tRaw;
 
-bool found = true; //On the line
-
+bool found = false; //Has the ball
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-
+  
   setupRSLK();
   /* Left button on Launchpad */
   setupWaitBtn(LP_LEFT_BTN);
@@ -65,61 +62,68 @@ void setup() {
   Wire.write(0); // wake up!
   Wire.endTransmission(true);
   waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
-  //while(analogRead(IRPIN) < 100);
-  enableMotor(BOTH_MOTORS);
-  int startDist = 22.5; //57cm 22.5in
-  goToDist(startDist/2, speed);
-  turnByDegrees(-135, speed);
-  int totalDegrees = 0;
-  for(int i = 0; i < 4; i++){
-    startDist = dist();
-    goToDist(MIN_DIST, speed);
-    delay(500);
-    if(foundBall()){
-      goHome(totalDegrees);
-      break;
-    }
-    goToDist(startDist, speed);
-    turnByDegrees(45, speed/2);
-    totalDegrees += 45;
-    startDist = dist();
-    goToDist(MIN_DIST, speed);
-    delay(500);
-    if(foundBall()){
-      goHome(totalDegrees);
-      break;
-    }
-    if(i == 4) continue;
-    goToDist(startDist, speed);
-    turnByDegrees(45, speed/2);
-    totalDegrees += 45;
-  }
-  goInches(4, speed);
-}
-
-
-void loop() {
   beep();
-  delay(1000);
+  goInches(10, speed);
+  //turnByDegrees(-135, speed);
 }
 
-void goHome(int currentDeg){
-  turnByDegrees(315-currentDeg, speed);
-  goInches(HOME_DIST, speed);
+bool alt = false;
+int count = 0;
+void loop() {
+  int d;
+  if (alt) d = 50;
+  else d = 60; 
+  if (!found and count < 8) {
+    goCM(20, speed);
+    count++;
+  } else {
+    goHome();
+  }
+  found = foundBall();
+  goCM(-1 * d, speed);
+  turnByDegrees(45, speed);
+}
+
+int dist() {
+  int duration, distance;
+  // Clears the trigPin condition
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH);
+  // Calculating the distance
+  distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
+  return distance;
+}
+
+void goHome(){
+  int d = dist();
+  goCM(d/2, speed);
+  int currAngle = 0;
+  int maxDist = d;
+  int maxAngle = 0;
+  while(currAngle < 360) {
+    turnByDegrees(10, speed);
+    currAngle += 10;
+    d = dist();
+    if (d > maxDist) {
+      maxDist = d;
+      maxAngle = currAngle;
+    }
+  }
+  turnByDegrees(maxAngle - currAngle, speed);
+  d = dist();
+  goCM(d - 10, speed);
+  beep();
+  beep();
 }
 
 bool foundBall(){
-  return analogRead(PHOTO_PIN) < 100;
-}
-
-bool lostLine() {
-  int numBelow = 0;
-  for (int i = 0; i < LS_NUM_SENSORS; i++) {
-    if (sensorVal[i] < baseline) {
-        return false;
-    }
-  }
-  return true;
+  return false; //analogRead(PHOTO_PIN) > 400;
 }
 
 /* The distance the wheel turns per revolution is equal to the diameter * PI.
@@ -138,30 +142,17 @@ uint32_t countForDistance(float wheel_diam, uint16_t cnt_per_rev, uint32_t dista
   return int(temp);
 }
 
-void goToDist(int distance, int s){
-  enableMotor(BOTH_MOTORS);
-  while(abs((distance - dist())) > 1){
-    if(dist() > distance){
-      setMotorDirection(BOTH_MOTORS, MOTOR_DIR_FORWARD);
-      setMotorSpeed(LEFT_MOTOR,s*LEFT_MOD);
-      setMotorSpeed(RIGHT_MOTOR,s*RIGHT_MOD);
-    }
-    else if(dist() < distance){
-      setMotorDirection(BOTH_MOTORS, MOTOR_DIR_BACKWARD);
-      setMotorSpeed(LEFT_MOTOR,s*LEFT_MOD);
-      setMotorSpeed(RIGHT_MOTOR,s*RIGHT_MOD);
-    }
-  }
-  
-  disableMotor(BOTH_MOTORS);
+void goCM(float cm, int s) {
+  int in = cm / 2.54;
+  goInches(in, s);
 }
 
-bool goInches(float inches, int s) {
+void goInches(float inches, int s) {
   enableMotor(BOTH_MOTORS);
   int totalCount = 0;
   /* Amount of encoder pulses needed to achieve distance */
   uint16_t x = countForDistance(wheelDiameter, cntPerRevolution, abs(inches));
-  x = 0.95 * x;
+  x = 0.97 * x;
   /* Set the encoder pulses count back to zero */
   resetLeftEncoderCnt();
   resetRightEncoderCnt();
@@ -169,31 +160,14 @@ bool goInches(float inches, int s) {
   if(inches > 0)  setMotorDirection(BOTH_MOTORS,MOTOR_DIR_FORWARD);
   else setMotorDirection(BOTH_MOTORS,MOTOR_DIR_BACKWARD);
   enableMotor(BOTH_MOTORS);
-  setMotorSpeed(LEFT_MOTOR,s*LEFT_MOD);
-  setMotorSpeed(RIGHT_MOTOR,s*RIGHT_MOD);
+  setMotorSpeed(LEFT_MOTOR,s*MOD);
+  setMotorSpeed(RIGHT_MOTOR,s);
   /* Drive motor until it has received x pulses */
   while(totalCount < x)
   {
     totalCount = getEncoderLeftCnt();
   }
   disableMotor(BOTH_MOTORS);
-}
-
-int dist() {
-  int distance;
-  int duration;
-  // Clears the trigPin condition
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  // Reads the echoPin, returns the sound wave travel time in microseconds
-  duration = pulseIn(echoPin, HIGH);
-  // Calculating the distance
-  distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
-  return distance;
 }
 
 void turnByDegrees(float deg, int speed){

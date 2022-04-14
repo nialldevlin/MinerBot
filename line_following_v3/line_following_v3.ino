@@ -35,14 +35,14 @@ uint8_t lineColor = LIGHT_LINE;
 int baseline;
 
 //Speed
-int speed = 15;
+int speed = 20;
 int diff = 10;
 float MOD = 0.97;
 
 //Laser
-
 int lpin = 12;
 int photoPin = A6;
+
 
 //MPU
 #define MPU6050_ADDR 0x68 // Alternatively set AD0 to HIGH  --> Address = 0x69
@@ -75,14 +75,14 @@ void setup() {
   waitBtnPressed(LP_LEFT_BTN,"Wait",RED_LED);
   beep();
   goInches(26, speed);
-  turnByDegrees(-140, speed);
+  turnByDegrees(-145, speed);
 }
 
 int count = 0;
 void loop() {
   int d;
-  if (count % 2 == 0) d = 50;
-  else d = 60; 
+  if (count % 2 == 0) d = 45;
+  else d = 45; 
   if (!found and count < 8) {
     goCM(d, speed);
     count++;
@@ -93,7 +93,7 @@ void loop() {
   disableMotor(BOTH_MOTORS);
   delay(100);
   goCM(-1 * d, speed);
-  turnByDegrees(35, speed);
+  turnByDegrees(40, speed);
 }
 
 int dist() {
@@ -120,10 +120,8 @@ void goHome(){
 }
 
 bool foundBall(){
-  digitalWrite(lpin, HIGH);
-  delay(10);
-  int v = analogRead(PHOTO_PIN);
-  digitalWrite(lpin, LOW);
+  int v = analogRead(photoPin);
+  Serial.println(v);
   return v > 400;
 }
 
@@ -153,7 +151,7 @@ void goInches(float inches, int s) {
   int totalCount = 0;
   /* Amount of encoder pulses needed to achieve distance */
   uint16_t x = countForDistance(wheelDiameter, cntPerRevolution, abs(inches));
-  x = 0.97 * x;
+  x = 0.96 * x;
   /* Set the encoder pulses count back to zero */
   resetLeftEncoderCnt();
   resetRightEncoderCnt();
